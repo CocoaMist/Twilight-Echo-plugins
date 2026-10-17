@@ -17,7 +17,7 @@ const SHA256 = /^[a-f0-9]{64}$/i
 const PLUGIN_TYPES = new Set(['provider', 'tool', 'ui', 'theme', 'dsp'])
 const PLUGIN_PERMISSIONS = new Set([
   'network', 'filesystem:read', 'filesystem:write', 'player:control', 'player:observe',
-  'library:read', 'library:write', 'settings', 'clipboard', 'ui:inject', 'dsp:native'
+  'library:read', 'library:write', 'settings', 'clipboard', 'ui:inject', 'app:settings', 'plugins:manage', 'dsp:native'
 ])
 const REQUIRED_FIELDS = [
   'id',
@@ -278,7 +278,7 @@ function validateManifest(manifest, packageName) {
       !/^(\*|(?:\^|~|>=)?\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?)$/.test(manifest.engines.twilightEcho)) {
     throw new Error(`${manifest.id} engines.twilightEcho 兼容范围无效`)
   }
-  if (!Number.isInteger(manifest.apiVersion) || manifest.apiVersion < 1 || manifest.apiVersion > 3) {
+  if (!Number.isInteger(manifest.apiVersion) || manifest.apiVersion < 1 || manifest.apiVersion > 4) {
     throw new Error(`${manifest.id} apiVersion 不受支持`)
   }
   const isPureTheme =
@@ -288,7 +288,24 @@ function validateManifest(manifest, packageName) {
   if (isPureTheme && (manifest.main || manifest.binary)) {
     throw new Error(`${manifest.id} 纯主题不能声明 main 或 binary`)
   }
-  if (!manifest.main && !manifest.binary && !(isPureTheme && hasThemes)) {
+  const hasExperiences = Array.isArray(manifest.contributes?.experiences) && manifest.contributes.experiences.length > 0
+  if (manifest.contributes?.experiences !== undefined) {
+    const experiences = manifest.contributes.experiences
+    if (!hasExperiences || experiences.length > 8 || manifest.apiVersion < 4 ||
+        !manifest.type.includes('ui') || !manifest.permissions.includes('ui:inject')) {
+      throw new Error(`${manifest.id} experiences requires API v4, ui and ui:inject`)
+    }
+    const ids = new Set()
+    for (const experience of experiences) {
+      if (!experience || typeof experience.id !== 'string' || !/^[a-z][a-z0-9-]{0,63}$/.test(experience.id) || ids.has(experience.id) ||
+          typeof experience.name !== 'string' || !experience.name.trim() || experience.name.length > 120 ||
+          typeof experience.entry !== 'string' || !/^[a-zA-Z0-9_/-]+\.html$/.test(experience.entry) || experience.entry.startsWith('/') ||
+          experience.bridgeVersion !== 1) throw new Error(`${manifest.id} invalid experience`)
+      ids.add(experience.id)
+      validateRelativePath(experience.entry, 'experience.entry', manifest.id)
+    }
+  }
+  if (!manifest.main && !manifest.binary && !(isPureTheme && hasThemes) && !hasExperiences) {
     throw new Error(`${manifest.id} 必须声明 main 或 binary，或为纯主题声明 contributes.themes`)
   }
   for (const field of ['main', 'icon']) validateRelativePath(manifest[field], field, manifest.id)
