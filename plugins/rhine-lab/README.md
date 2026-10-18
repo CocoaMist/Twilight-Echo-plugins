@@ -22,6 +22,13 @@ Twilight Echo 的完整界面插件预览版 0.2.9，基于 RonaldDeng/Rhine-Mus
 构建：`npm run build`。宿主模式只通过 MessageChannel 使用真实曲库与音频引擎。
 独立浏览器模式保留上游预览行为。
 
+## 维护与反馈
+
+- 维护者：Px-asen（Twilight Echo）；上游 Rhine Music 由 RonaldDeng 维护。
+- 反馈入口：[Twilight-Echo-plugins Issues](https://github.com/Px-asen/Twilight-Echo-plugins/issues)。
+- 运行平台：随 Twilight Echo 宿主运行，当前在 Windows 10/11 验证；macOS 与 Linux 宿主尚未验证。
+- 上游与版本：基于 [RonaldDeng/Rhine-Music-Demo](https://github.com/RonaldDeng/Rhine-Music-Demo) V0.5.0（`a889801f`），加载开场另参考 [LBEILC/RhineLabUI](https://github.com/LBEILC/RhineLabUI)（`12cc5e40`）。插件使用独立版本号（当前 0.2.9），由本仓库维护；上游作者未参与本插件的开发，也不为其提供支持或背书。
+
 源码及资源来源见 UPSTREAM.json、UPSTREAM_README.md、NOTICE.md 和 LICENSE。
 歌词实现、许可与实测记录见 docs/LYRICS-0.2.8.md；`npm run check:lyrics` 运行解析／时钟及隔离宿主界面测试（沿用项目浏览器测试环境）。
 已验证范围与高级功能限制见 IMPLEMENTATION_STATUS.md。补充项目评估见 docs/SUPPLEMENTARY_ASSESSMENT.md。
