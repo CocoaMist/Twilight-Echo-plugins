@@ -300,7 +300,7 @@ function validateManifest(manifest, packageName) {
       if (!experience || typeof experience.id !== 'string' || !/^[a-z][a-z0-9-]{0,63}$/.test(experience.id) || ids.has(experience.id) ||
           typeof experience.name !== 'string' || !experience.name.trim() || experience.name.length > 120 ||
           typeof experience.entry !== 'string' || !/^[a-zA-Z0-9_/-]+\.html$/.test(experience.entry) || experience.entry.startsWith('/') ||
-          experience.bridgeVersion !== 1) throw new Error(`${manifest.id} invalid experience`)
+          (experience.bridgeVersion !== 1 && experience.bridgeVersion !== 2)) throw new Error(`${manifest.id} invalid experience`)
       ids.add(experience.id)
       validateRelativePath(experience.entry, 'experience.entry', manifest.id)
     }

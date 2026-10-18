@@ -19,6 +19,8 @@
     "pack:qishui": "node scripts/pack-plugin.cjs qishui-provider && pnpm run index",
     "pack:navidrome": "node scripts/pack-plugin.cjs navidrome-provider && pnpm run index",
     "pack:dynamic-island": "node scripts/pack-plugin.cjs dynamic-island && pnpm run index",
+    "pack:wallpaper-engine": "node scripts/pack-plugin.cjs wallpaper-engine && pnpm run index",
+    "test:wallpaper-engine": "node --test plugins/wallpaper-engine/*.test.mjs",
     "build:kugou-vendor": "node scripts/build-kugou-vendor.mjs"
   },
   "devDependencies": {

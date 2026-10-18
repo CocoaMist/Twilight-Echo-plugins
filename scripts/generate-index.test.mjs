@@ -93,6 +93,29 @@ test('rejects themes with executable entries or missing contributions and entryl
   }
 })
 
+test('experience bridge versions match the host manifest contract', async () => {
+  for (const bridgeVersion of [1, 2, 3, '2']) {
+    const root = await createRepoFixture()
+    const experienceManifest = {
+      ...manifest,
+      type: ['ui'],
+      main: undefined,
+      apiVersion: 4,
+      permissions: ['ui:inject'],
+      contributes: {
+        experiences: [{ id: 'example', name: 'Example', entry: 'dist/index.html', bridgeVersion }]
+      }
+    }
+    await createPluginPackage(root, experienceManifest)
+    if (bridgeVersion === 1 || bridgeVersion === 2) {
+      const index = await generatePluginIndex({ repoRoot: root })
+      assert.equal(index.plugins[0].contributes.experiences[0].bridgeVersion, bridgeVersion)
+    } else {
+      await assert.rejects(() => generatePluginIndex({ repoRoot: root }), /invalid experience/)
+    }
+  }
+})
+
 test('generates plugins.json from packaged tep files', async () => {
   const root = await createRepoFixture()
   const packagePath = await createPluginPackage(root, manifest)
