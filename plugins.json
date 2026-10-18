@@ -37,12 +37,11 @@
     {
       "id": "com.github.iris-sci.playlist-bridge",
       "name": "歌单文件桥接",
-      "version": "1.1.0",
-      "description": "直接读取任意播放器保存的 m3u8 / m3u / pls / xspf / wpl / asx / fpl / fplite 歌单文件，在 Twilight Echo 里按原样浏览和播放，无需逐个重新整理。",
+      "version": "2.0.0",
+      "description": "把任意播放器保存的 m3u8 / m3u / pls / xspf / wpl / asx / fpl / fplite 歌单导入为本地歌单。配置：设置 → 系统与关于 → 插件设置 → 歌单文件桥接。",
       "author": "IRIS-SCI",
       "license": "MIT",
       "type": [
-        "provider",
         "ui"
       ],
       "main": "index.mjs",
@@ -51,18 +50,15 @@
       },
       "apiVersion": 3,
       "permissions": [
-        "network",
         "filesystem:read",
         "settings",
-        "library:read",
         "library:write",
         "ui:inject"
       ],
       "repository": "https://github.com/IRIS-SCI/twilight-playlist-bridge",
-      "sourceUrl": "https://github.com/IRIS-SCI/twilight-playlist-bridge/releases/download/v1.1.0/com.github.iris-sci.playlist-bridge-1.1.0.tep",
-      "checksumSha256": "4b79226cd25e0c5fe6a734e29af5cf277d64a4d864178e551854efe576e26fcf",
+      "sourceUrl": "https://github.com/IRIS-SCI/twilight-playlist-bridge/releases/download/v2.0.0/com.github.iris-sci.playlist-bridge-2.0.0.tep",
+      "checksumSha256": "43d178001180c9b2ad2dc22b63406a39f134a2836cf09eb46c5f6eaa56b02f94",
       "tags": [
-        "provider",
         "ui",
         "foobar2000",
         "m3u8",

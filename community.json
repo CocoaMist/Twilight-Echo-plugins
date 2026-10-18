@@ -5,19 +5,18 @@
   },
   "history": {
     "com.github.iris-sci.playlist-bridge": {
-      "version": "1.1.0",
-      "checksumSha256": "4b79226cd25e0c5fe6a734e29af5cf277d64a4d864178e551854efe576e26fcf"
+      "version": "2.0.0",
+      "checksumSha256": "43d178001180c9b2ad2dc22b63406a39f134a2836cf09eb46c5f6eaa56b02f94"
     }
   },
   "plugins": [
     {
       "id": "com.github.iris-sci.playlist-bridge",
-      "version": "1.1.0",
+      "version": "2.0.0",
       "repository": "https://github.com/IRIS-SCI/twilight-playlist-bridge",
-      "sourceUrl": "https://github.com/IRIS-SCI/twilight-playlist-bridge/releases/download/v1.1.0/com.github.iris-sci.playlist-bridge-1.1.0.tep",
-      "checksumSha256": "4b79226cd25e0c5fe6a734e29af5cf277d64a4d864178e551854efe576e26fcf",
+      "sourceUrl": "https://github.com/IRIS-SCI/twilight-playlist-bridge/releases/download/v2.0.0/com.github.iris-sci.playlist-bridge-2.0.0.tep",
+      "checksumSha256": "43d178001180c9b2ad2dc22b63406a39f134a2836cf09eb46c5f6eaa56b02f94",
       "tags": [
-        "provider",
         "ui",
         "foobar2000",
         "m3u8",
