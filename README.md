@@ -245,6 +245,61 @@ The index uses relative package URLs such as
 `packages/com.twilightecho.provider.bilibili-0.1.15.tep`, so Twilight Echo
 resolves the package from the same GitHub raw base URL.
 
+## Publish to Cloudflare R2
+
+Production distribution uses `https://plugins.aaapi.fun/plugins.json`, backed by
+the `twilight-echo-plugins` R2 Standard bucket in Asia-Pacific. The source index
+and original GitHub URLs stay unchanged for existing clients.
+
+When publishing a plugin, rebuild its package and source index as usual, then push
+to `main`. [Publish R2 distribution](.github/workflows/r2-distribution.yml) uploads
+the referenced packages first and replaces the public index last. It also runs
+after successful community discovery, including discovery commits made with
+`GITHUB_TOKEN`. Manual redeploys use **Actions → Publish R2 distribution → Run workflow**.
+
+To inspect a distribution locally without credentials:
+
+```sh
+pnpm run build:r2
+```
+
+`dist/r2/plugins.json` references only R2-relative, content-addressed package
+filenames. The build copies local packages, downloads community packages, and
+verifies every archive against the original `checksumSha256`. It never runs
+plugin code. `dist/r2/deployment.json` records the upload inventory and exclusions;
+that file is not published. Source files, old packages, and local previews are not
+uploaded. The Miku navigation preview is excluded in `r2.json` because its artwork
+has no public redistribution grant. Resolve that permission before removing its
+exclusion.
+
+`r2.json` contains only public configuration. The repository's Actions secrets
+`R2_ACCESS_KEY_ID` and `R2_SECRET_ACCESS_KEY` hold an R2 **Object Read & Write**
+credential scoped only to this bucket. No account/DNS administration permission
+is needed. For a local upload, provide those environment variables through your
+secret manager and run `pnpm run deploy:r2`; never put credentials in source or
+command-line arguments.
+
+The custom domain must belong to the same Cloudflare account as the bucket.
+Bind `plugins.aaapi.fun` in **R2 → twilight-echo-plugins → Settings → Custom Domains**.
+Public development access (`r2.dev`) is not used for production. Cache Rules must
+make the following resources **Eligible for cache**, respecting origin cache headers:
+
+- Host `plugins.aaapi.fun`, path `/plugins.json`: `public, max-age=60`.
+- Host `plugins.aaapi.fun`, path starts with `/packages/`: `public, max-age=31536000, immutable`.
+
+Only package filenames containing their SHA-256 receive immutable caching. The
+publisher refuses to overwrite an existing package with unexpected metadata and
+does not delete old objects, so cached indexes and installed older clients retain
+their referenced packages. To roll back the catalog, revert the source index to
+the desired versions and run the publish workflow; the index cache expires within
+60 seconds. `verified` claims keep their original meaning. If publisher signatures
+are added later, the R2 build stops until entries can be re-signed for the new
+index URL; it never silently drops or invalidates signatures.
+
+For client testing, set `TWILIGHT_PLUGIN_INDEX_URL` to the production index URL.
+R2's global CDN route is separate from Cloudflare's mainland China network;
+measure downloads on the users' actual networks before promising mainland speeds.
+
 ## Deploy to EdgeOne Makers
 
 在 EdgeOne Makers 控制台新建项目，选择 **导入 Git 仓库**，授权 GitHub 后导入
