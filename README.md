@@ -80,17 +80,6 @@ plugins.json
 
 ## Current Plugins
 
-### Wallpaper Engine Dynamic Background
-
-Plugin id: `com.twilightecho.tool.wallpaper-engine` · Author: **Matsuki**
-
-Scans locally installed Wallpaper Engine projects and serves video, web, and
-WebWallGL scene wallpapers to the app's background bridge, with live layout and
-wallpaper property controls. Requires a Twilight Echo build with the renderer
-bridge and loopback CSP integration. See
-[`plugins/wallpaper-engine/README.md`](plugins/wallpaper-engine/README.md).
-Build it with `pnpm run pack:wallpaper-engine`.
-
 ### Dynamic Island
 
 Plugin id: `com.bad0rang3.dynamic-island`
