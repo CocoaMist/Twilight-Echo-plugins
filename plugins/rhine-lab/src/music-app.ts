@@ -43,6 +43,7 @@ import {
 import { fileAtCell, nearestOccurrence, wrap, type ArchiveNavigation } from "./archive-loop";
 import {
   normalizeQuality,
+  restoreOriginalQuality,
   qualityPresets,
   type QualityPreset,
   type RenderQuality,
@@ -142,6 +143,7 @@ const preferences = {
     sound: true,
     soundVolume: 0.22,
     renderQuality: undefined as RenderQuality | undefined,
+    renderQualityRevision: undefined as number | undefined,
     developerMode: false,
     motionDebug: false,
     motionSpeed: 1,
@@ -168,6 +170,7 @@ const preferences = {
       sound: boolean;
       soundVolume: number;
       renderQuality: RenderQuality;
+      renderQualityRevision: number;
       developerMode: boolean;
       motionDebug: boolean;
       motionSpeed: number;
@@ -179,9 +182,16 @@ loadingOpening.setReduced(preferences.reduced);
 preferences.songTransition = normalizeSongTransition(preferences.songTransition, preferences.songFade);
 preferences.showSongTransitionControl = preferences.showSongTransitionControl !== false;
 delete preferences.songFade;
-let renderQuality = normalizeQuality(
+let renderQuality = restoreOriginalQuality(
   preferences.renderQuality || qualityPresets[preferences.quality],
+  preferences.quality,
+  preferences.renderQualityRevision,
 );
+if (preferences.renderQualityRevision !== 1) {
+  preferences.renderQuality = renderQuality;
+  preferences.renderQualityRevision = 1;
+  save("rhine-music-preferences", preferences);
+}
 if (!["day", "night"].includes(preferences.theme)) {
   preferences.theme = "day";
   save("rhine-music-preferences", preferences);
@@ -2023,7 +2033,7 @@ function updateQuality() {
   syncQualityUI(renderQuality);
   const summary = document.querySelector("#quality-summary");
   if (summary)
-    summary.textContent = `${renderQuality.frameRate} FPS · 渲染 ${renderQuality.scale}% · 像素上限 ${renderQuality.pixelRatio}× · ${renderQuality.antialias === "off" ? "原始抗锯齿" : "SMAA"}`;
+    summary.textContent = `${renderQuality.frameRate} FPS · 渲染 ${renderQuality.scale}% · 像素上限 ${renderQuality.pixelRatio}× · ${renderQuality.antialias === "off" ? "抗锯齿关闭" : renderQuality.antialias.toUpperCase()}`;
   savePrefs();
 }
 function showGenreEditor(show: boolean) {
@@ -2500,7 +2510,7 @@ document.addEventListener("change", (e) => {
     renderQuality = normalizeQuality({
       ...renderQuality,
       [el.dataset.quality]:
-        el.dataset.quality === "antialias" ? el.value : Number(el.value),
+        el.dataset.quality === "antialias" || el.dataset.quality === "modelDetail" ? el.value : Number(el.value),
     });
     updateQuality();
   }

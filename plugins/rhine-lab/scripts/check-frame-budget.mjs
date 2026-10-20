@@ -59,7 +59,7 @@ try {
   assert.equal(await fps.inputValue(), "60");
   assert.equal(
     await page.locator('[data-quality="pixelRatio"]').inputValue(),
-    "1",
+    "1.5",
   );
   assert.deepEqual(
     await fps
@@ -86,7 +86,7 @@ try {
   assert.equal(await fps.inputValue(), "30", "FPS is restored after reload");
   assert.equal(
     await page.locator('[data-quality="pixelRatio"]').inputValue(),
-    "1",
+    "1.5",
   );
   await page.locator('[data-action="close-panel"]').click();
   await page.route(base + "/__shadow-cache", (route) =>

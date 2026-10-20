@@ -7,10 +7,13 @@ import { SSAOPass } from "three/addons/postprocessing/SSAOPass.js";
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
 import { BokehPass } from "three/addons/postprocessing/BokehPass.js";
 import { MusicBokehPass } from "./music-bokeh-pass";
-import { SMAAPass } from "three/addons/postprocessing/SMAAPass.js";
+import { LightAntialiasPass, OptionalSMAAPass } from "./antialias-pass";
 import { normalizeQuality, type RenderQuality } from "./render-quality";
 import { applyTextureQuality, resizeQuality } from "./quality-renderer";
 import { ShadowCache, writeMatrixIfChanged } from "./render-cache";
+import { ModelProxies } from "./model-proxies";
+import { CachedOcclusionPass } from "./cached-occlusion-pass";
+import { GlassRenderPass } from "./glass-render-pass";
 import { CardAppearance } from "./appearance";
 import { configureInternalOptics } from "./internal-optics";
 import { DecryptionController } from "./decryption";
@@ -89,6 +92,7 @@ export class ArchiveScene {
   private ao: SSAOPass;
   private bokeh: BokehPass;
   private instances: THREE.InstancedMesh[] = [];
+  private modelProxies?: ModelProxies;
   private model = new THREE.Group();
   private appearance = new CardAppearance();
   private decryption = new DecryptionController();
@@ -194,7 +198,8 @@ export class ArchiveScene {
   private readonly shadowCache = new ShadowCache();
   private disposed = false;
   private hoverFrame = 0;
-  private smaa = new SMAAPass();
+  private smaa = new OptionalSMAAPass();
+  private fxaa = new LightAntialiasPass();
   private aoKernelSize = 32;
   private displayHeight = 0;
   private layoutKind = "";
@@ -208,7 +213,7 @@ export class ArchiveScene {
     private readonly lightingLook: LightingLook = "baseline",
   ) {
     this.renderer = new THREE.WebGLRenderer({
-      antialias: true,
+      antialias: false,
       alpha: false,
       powerPreference: "high-performance",
     });
@@ -266,8 +271,9 @@ export class ArchiveScene {
     this.camera.fov = 6.15;
     this.camera.lookAt(this.cameraAim);
     this.composer = new EffectComposer(this.renderer);
-    this.composer.addPass(new RenderPass(this.scene, this.camera));
-    this.ao = new SSAOPass(
+    this.composer.addPass(new (musicLibrary ? GlassRenderPass : RenderPass)(this.scene, this.camera));
+    const Occlusion = musicLibrary ? CachedOcclusionPass : SSAOPass;
+    this.ao = new Occlusion(
       this.scene,
       this.camera,
       container.clientWidth,
@@ -287,6 +293,7 @@ export class ArchiveScene {
     this.smaa.enabled = false;
     this.composer.addPass(this.smaa);
     this.composer.addPass(new OutputPass());
+    this.composer.addPass(this.fxaa);
     this.bindPointer();
   }
   async load(assetUrl = publicAsset(musicLibrary ? MUSIC_CD_ASSET : "assets/archive-cassette.glb"), selectedIndex = 0) {
@@ -451,6 +458,8 @@ export class ArchiveScene {
       const transforms = this.instances[0].instanceMatrix;
       for (const inst of this.instances) inst.instanceMatrix = transforms;
       this.covers.array.instanceMatrix = transforms;
+      this.modelProxies = await ModelProxies.create(this.instances, this.scene, () => this.disposed);
+      if (this.disposed) return;
     }
     this.scene.add(this.covers.array);
     this.model.add(this.covers.selected);
@@ -983,7 +992,8 @@ export class ArchiveScene {
     this.quality = quality;
     if (quality.aoSamples && quality.aoSamples !== this.aoKernelSize) {
       const old = this.ao;
-      this.ao = new SSAOPass(this.scene, this.camera, 1, 1, quality.aoSamples);
+      const Occlusion = musicLibrary ? CachedOcclusionPass : SSAOPass;
+      this.ao = new Occlusion(this.scene, this.camera, 1, 1, quality.aoSamples);
       this.ao.kernelRadius = old.kernelRadius;
       this.ao.minDistance = old.minDistance;
       this.ao.maxDistance = old.maxDistance;
@@ -997,6 +1007,7 @@ export class ArchiveScene {
     this.ao.enabled = quality.aoSamples > 0;
     this.bokeh.enabled = quality.depthOfField > 0;
     this.smaa.enabled = quality.antialias === "smaa";
+    this.fxaa.enabled = quality.antialias === "fxaa";
     this.renderer.shadowMap.enabled = quality.shadows > 0;
     const size = Math.min(
       quality.shadows || 1024,
@@ -1248,8 +1259,8 @@ export class ArchiveScene {
       this.quality,
     );
     this.ao.setSize(
-      Math.max(1, Math.floor(dimensions.width * this.quality.aoResolution)),
-      Math.max(1, Math.floor(dimensions.height * this.quality.aoResolution)),
+      this.ao.enabled ? Math.max(1, Math.floor(dimensions.width * this.quality.aoResolution)) : 1,
+      this.ao.enabled ? Math.max(1, Math.floor(dimensions.height * this.quality.aoResolution)) : 1,
     );
     this.container.dataset.renderQuality = JSON.stringify({
       ...JSON.parse(this.container.dataset.renderQuality!),
@@ -1321,7 +1332,7 @@ export class ArchiveScene {
         if (this.disposed || this.reveal < 0.8 || this.detail > 0.2 || !this.loaded || !records.length) return;
         this.raycaster.setFromCamera(this.cursor, this.camera);
         const hit = this.raycaster.intersectObjects(
-          [this.instances[0], this.model], true,
+          [this.modelProxies?.pick ?? this.instances[0], this.model], true,
         ).find((hit) => this.pickableCell(hit.instanceId === undefined ? this.selectedCell : this.cells[hit.instanceId]));
         canvas.style.cursor = hit ? "pointer" : "default";
         this.onHover?.(hit ? hit.instanceId !== undefined
@@ -1353,7 +1364,7 @@ export class ArchiveScene {
       );
       this.raycaster.setFromCamera(this.cursor, this.camera);
       const hit = this.raycaster.intersectObjects(
-        [this.instances[0], this.model],
+        [this.modelProxies?.pick ?? this.instances[0], this.model],
         true,
       ).find((hit) => this.pickableCell(hit.instanceId === undefined ? this.selectedCell : this.cells[hit.instanceId]));
       if (hit)
@@ -2015,6 +2026,7 @@ export class ArchiveScene {
 
     this.camera.updateProjectionMatrix();
     this.camera.updateMatrixWorld();
+    this.modelProxies?.update(this.camera, this.renderer.domElement.height, this.quality.modelDetail);
     let neighborTop = -Infinity;
     const boxTop = musicLibrary ? MUSIC_MODEL.center.y + MUSIC_MODEL.height / 2 : 3.76;
     const boxBottom = musicLibrary ? MUSIC_MODEL.center.y - MUSIC_MODEL.height / 2 : 0;
@@ -2127,6 +2139,7 @@ export class ArchiveScene {
     this.loaded = false;
     this.covers?.dispose();
     this.covers = undefined;
+    this.modelProxies?.dispose();
     for (const group of this.copyPool) this.appearance.dispose(group);
     this.copyPool.length = 0;
     const geometries = new Set<THREE.BufferGeometry>();
@@ -2188,6 +2201,8 @@ export class ArchiveScene {
     };
     return {
       covers: this.covers?.getStats(),
+      renderTiers: this.modelProxies?.getStats(),
+      occlusionCache: this.ao instanceof CachedOcclusionPass ? { ...this.ao.stats } : undefined,
       arrayMode: this.musicArrayMode,
       graphics: { geometries: this.renderer.info.memory.geometries,
         textures: this.renderer.info.memory.textures, programs: this.renderer.info.programs?.length,

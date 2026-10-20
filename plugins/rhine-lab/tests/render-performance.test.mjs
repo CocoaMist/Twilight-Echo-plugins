@@ -6,12 +6,16 @@ import {
   normalizeQuality,
   qualityPresets,
   matchingPreset,
+  restoreOriginalQuality,
 } from "../src/render-quality.ts";
 import { ShadowCache, writeMatrixIfChanged } from "../src/render-cache.ts";
 
 test("defaults, legacy storage and FPS changes preserve independent quality choices", () => {
+  assert.equal(normalizeQuality(null).antialias,"off");
+  for(const antialias of ['off','fxaa','smaa'])assert.equal(normalizeQuality({antialias}).antialias,antialias);
   assert.equal(normalizeQuality(null).frameRate, 60);
-  assert.equal(normalizeQuality(null).pixelRatio, 1);
+  assert.equal(normalizeQuality(null).pixelRatio, 1.5);
+  assert.equal(normalizeQuality(null).modelDetail, "full");
   assert.equal(normalizeQuality({ pixelRatio: 1.5 }).pixelRatio, 1.5);
   for (const bad of [null, undefined, 0, -1, NaN, Infinity, "120", 144])
     assert.equal(normalizeQuality({ frameRate: bad }).frameRate, 60);
@@ -22,6 +26,21 @@ test("defaults, legacy storage and FPS changes preserve independent quality choi
       saved,
     );
     assert.equal(matchingPreset(saved), "original");
+  }
+});
+
+test("repair old stock quality once, preserving custom settings and FPS", () => {
+  const stock = { ...qualityPresets.original, frameRate: 30, pixelRatio: 1 };
+  delete stock.modelDetail;
+  for (const antialias of ["off", "fxaa"]) {
+    const old = { ...stock, antialias };
+    assert.deepEqual(restoreOriginalQuality(old, "original", undefined), { ...qualityPresets.original, frameRate: 30 });
+    assert.deepEqual(restoreOriginalQuality(old, "original", 1), normalizeQuality(old));
+    assert.deepEqual(restoreOriginalQuality(old, "performance", undefined), normalizeQuality(old));
+  }
+  for (const custom of [{scale:95},{antialias:"smaa"},{pixelRatio:2},{modelDetail:"full"},{aoSamples:16}]) {
+    const old = { ...stock, ...custom };
+    assert.deepEqual(restoreOriginalQuality(old,"original",undefined),normalizeQuality(old));
   }
 });
 
