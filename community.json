@@ -29,18 +29,6 @@
         "twilight-echo",
         "community"
       ]
-    },
-    {
-      "id": "com.twilightecho.tool.wallpaper-engine",
-      "version": "2.1.0",
-      "repository": "https://github.com/Sh1rotr1/twilight-echo-wallpaper-engine",
-      "sourceUrl": "https://github.com/Sh1rotr1/twilight-echo-wallpaper-engine/releases/download/v2.1.0/com.twilightecho.tool.wallpaper-engine-2.1.0.tep",
-      "checksumSha256": "1e2932b9535c0a584cf3eea7f59a6b92c341507d91979b493a953934e99ced06",
-      "tags": [
-        "tool",
-        "ui",
-        "community"
-      ]
     }
   ]
 }
