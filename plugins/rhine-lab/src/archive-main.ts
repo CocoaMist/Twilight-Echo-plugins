@@ -4,6 +4,7 @@ import "./document-decryption.css";
 import "./decryption.css";
 import { escapeHtml } from "./html";
 import { normalizeQuality, qualityPresets, type QualityPreset, type RenderQuality } from "./render-quality";
+import { FrameLimiter } from "./frame-limiter";
 import { qualityMarkup, syncQualityUI } from "./quality-settings";
 import "@kitlangton/rolling-number/styles.css";
 import "./style.css";
@@ -612,7 +613,7 @@ document.addEventListener("input", (e) => {
 document.addEventListener("change", (e) => {
   const el = e.target as HTMLInputElement;
   if (el.id === "quality-preset" && Object.hasOwn(qualityPresets, el.value)) {
-    prefs.rendering = { ...qualityPresets[el.value as QualityPreset] };
+    prefs.rendering = { ...qualityPresets[el.value as QualityPreset], frameRate: prefs.rendering.frameRate };
     savePrefs();
   } else if (el.dataset.quality) {
     const key = el.dataset.quality as keyof RenderQuality;
@@ -851,8 +852,10 @@ let lastTime = 0,
   frameCount = 0,
   frameStart = performance.now(),
   fps = 0;
+const frameLimiter = new FrameLimiter();
 function frame(ms: number) {
-  if (document.hidden) { requestAnimationFrame(frame); return; }
+  if (document.hidden) { frameLimiter.reset(); requestAnimationFrame(frame); return; }
+  if (!frameLimiter.shouldRender(ms, prefs.rendering.frameRate)) { requestAnimationFrame(frame); return; }
   const time = ms / 1000;
   const cinema =
     mode === "boot" && ready

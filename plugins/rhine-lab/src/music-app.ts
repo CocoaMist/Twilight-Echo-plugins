@@ -70,6 +70,7 @@ import { musicArtistKey } from "./music-order";
 import { MusicBoot } from "./music-boot";
 import { loadingOpening } from "./loading-opening";
 import { MusicFrameTiming } from "./music-frame-timing";
+import { FrameLimiter } from "./frame-limiter";
 import { searchMusicLibrary } from "./music-search";
 import { viewportLayout } from "./viewport-layout";
 import { setupLightingLab } from "./music-lighting-lab";
@@ -2022,7 +2023,7 @@ function updateQuality() {
   syncQualityUI(renderQuality);
   const summary = document.querySelector("#quality-summary");
   if (summary)
-    summary.textContent = `渲染 ${renderQuality.scale}% · 像素上限 ${renderQuality.pixelRatio}× · ${renderQuality.antialias === "off" ? "原始抗锯齿" : "SMAA"}`;
+    summary.textContent = `${renderQuality.frameRate} FPS · 渲染 ${renderQuality.scale}% · 像素上限 ${renderQuality.pixelRatio}× · ${renderQuality.antialias === "off" ? "原始抗锯齿" : "SMAA"}`;
   savePrefs();
 }
 function showGenreEditor(show: boolean) {
@@ -2492,7 +2493,7 @@ document.addEventListener("change", (e) => {
   }
   if (el.id === "quality-preset") {
     preferences.quality = el.value as QualityPreset;
-    renderQuality = normalizeQuality(qualityPresets[preferences.quality]);
+    renderQuality = normalizeQuality({ ...qualityPresets[preferences.quality], frameRate: renderQuality.frameRate });
     updateQuality();
   }
   if (el.dataset.quality) {
@@ -2668,10 +2669,15 @@ let lastFrame: number | undefined;
 let frameCount = 0, frameHandle = 0;
 let frameDisposed = false, frameSuspended = false;
 const frameTiming = new MusicFrameTiming();
+const frameLimiter = new FrameLimiter();
 let textMotionTime = 0, textMotionLastFrame: number | undefined;
 function frame(ms: number) {
   frameHandle = 0;
   if (frameDisposed || frameSuspended) return;
+  if (!frameLimiter.shouldRender(ms, renderQuality.frameRate)) {
+    frameHandle = requestAnimationFrame(frame);
+    return;
+  }
   const workStart = performance.now();
   const textDt = textMotionLastFrame === undefined ? 0 : Math.min(.05, Math.max(0, ms - textMotionLastFrame) / 1000);
   textMotionLastFrame = ms;
@@ -2743,6 +2749,7 @@ function frame(ms: number) {
   frameHandle = requestAnimationFrame(frame);
 }
 function resetFrameTiming() {
+  frameLimiter.reset();
   frameCount = 0;
   lastFrame = undefined;
   textMotionLastFrame = undefined;

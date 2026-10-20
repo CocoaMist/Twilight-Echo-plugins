@@ -4,6 +4,7 @@ import {
   type QualityPreset,
   type RenderQuality,
 } from "./render-quality";
+import { frameRates } from "./frame-limiter";
 
 function select(
   quality: RenderQuality,
@@ -29,6 +30,7 @@ export function qualityMarkup(quality: RenderQuality, music = false) {
   return `<section class="quality-settings" aria-label="画质设置">
     <div class="quality-heading"><h3>${music ? "画质" : "RENDER QUALITY <span>渲染画质</span>"}</h3><select id="quality-preset" aria-label="画质预设">${(Object.keys(presetLabels) as QualityPreset[]).map((key) => `<option value="${key}" ${preset === key ? "selected" : ""}>${presetLabels[key]}</option>`).join("")}<option value="custom" disabled ${preset === "custom" ? "selected" : ""}>自定义</option></select></div>
     <p class="quality-summary" id="quality-summary" aria-live="polite"></p>
+    ${select(quality, "frameRate", "帧率上限", "默认 60 FPS；降低帧率可减少显卡占用与功耗", frameRates.map((v) => [v, `${v} FPS`]))}
     <details class="quality-advanced"><summary>精细设置 <span>清晰度 / 材质 / 阴影</span></summary><div class="quality-grid">
     ${range(quality, "scale", "渲染比例", "相对屏幕像素，受密度上限限制；高比例改善细线", 50, 200)}
     ${select(

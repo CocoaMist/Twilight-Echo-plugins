@@ -1,5 +1,8 @@
+import { normalizeFrameRate, type FrameRate } from "./frame-limiter.ts";
+
 /** Rendering controls are independent of lighting, materials and animation. */
 export type RenderQuality = {
+  frameRate: FrameRate;
   scale: number;
   pixelRatio: number;
   antialias: "off" | "smaa";
@@ -13,6 +16,7 @@ export type RenderQuality = {
 
 export const qualityPresets = {
   performance: {
+    frameRate: 60,
     scale: 80,
     pixelRatio: 1,
     antialias: "off",
@@ -24,8 +28,9 @@ export const qualityPresets = {
     anisotropy: 4,
   },
   original: {
+    frameRate: 60,
     scale: 100,
-    pixelRatio: 1.5,
+    pixelRatio: 1,
     antialias: "off",
     shadows: 2048,
     aoSamples: 32,
@@ -35,6 +40,7 @@ export const qualityPresets = {
     anisotropy: 16,
   },
   high: {
+    frameRate: 60,
     scale: 125,
     pixelRatio: 2,
     antialias: "smaa",
@@ -46,6 +52,7 @@ export const qualityPresets = {
     anisotropy: 16,
   },
   ultra: {
+    frameRate: 60,
     scale: 150,
     pixelRatio: 2,
     antialias: "smaa",
@@ -92,6 +99,7 @@ export function normalizeQuality(
     ? base
     : { ...base, pixelRatio: 1, aoSamples: 0, depthOfField: 0 };
   return {
+    frameRate: normalizeFrameRate(v.frameRate),
     scale: range(v.scale, 50, 200, 5, fallback.scale),
     pixelRatio: member(v.pixelRatio, [1, 1.5, 2, 3], fallback.pixelRatio),
     antialias: member(
@@ -118,7 +126,7 @@ export function matchingPreset(
   return (
     (Object.keys(qualityPresets) as QualityPreset[]).find((key) =>
       Object.entries(qualityPresets[key]).every(
-        ([field, value]) => quality[field as keyof RenderQuality] === value,
+        ([field, value]) => field === "frameRate" || quality[field as keyof RenderQuality] === value,
       ),
     ) ?? "custom"
   );

@@ -10,6 +10,7 @@ import { MusicBokehPass } from "./music-bokeh-pass";
 import { SMAAPass } from "three/addons/postprocessing/SMAAPass.js";
 import { normalizeQuality, type RenderQuality } from "./render-quality";
 import { applyTextureQuality, resizeQuality } from "./quality-renderer";
+import { ShadowCache, writeMatrixIfChanged } from "./render-cache";
 import { CardAppearance } from "./appearance";
 import { configureInternalOptics } from "./internal-optics";
 import { DecryptionController } from "./decryption";
@@ -190,6 +191,7 @@ export class ArchiveScene {
   private reduced = false;
   private quality = normalizeQuality(undefined);
   private appliedQuality = "";
+  private readonly shadowCache = new ShadowCache();
   private disposed = false;
   private hoverFrame = 0;
   private smaa = new SMAAPass();
@@ -211,7 +213,7 @@ export class ArchiveScene {
       powerPreference: "high-performance",
     });
     this.renderer.setPixelRatio(
-      Math.min(devicePixelRatio, 1.5) *
+      Math.min(devicePixelRatio, 1) *
         Math.min(innerWidth / 1920, innerHeight / 1080),
     );
     this.renderer.setSize(container.clientWidth, container.clientHeight);
@@ -1714,6 +1716,7 @@ export class ArchiveScene {
     // Consecutive cards share their half-row slope sample. Keep it local to
     // this traversal: no callback indirection, hashing or cross-frame state.
     let previousSlopeRow = NaN, previousSlopeLane = NaN, previousSlope = 0;
+    let instanceTransformsChanged = false;
     for (let i = 0; i < this.positions.length; i++) {
       const p = this.positions[i];
       const { row, lane } = this.cells[i];
@@ -1734,14 +1737,18 @@ export class ArchiveScene {
         (!musicIntro && (cinematic || !this.looping) && i >= (musicLibrary ? 5 * this.poolRows : 160));
       this.applyMusicColumnExtent(this.dummy, hiddenCell ? 0 : cinematic ? 1 : this.musicColumnExtent(lane));
       this.dummy.updateMatrix();
-      if (musicLibrary) this.instances[0]?.setMatrixAt(i, this.dummy.matrix);
+      if (musicLibrary && this.instances[0]) {
+        instanceTransformsChanged = writeMatrixIfChanged(
+          this.instances[0].instanceMatrix.array as Float32Array, i * 16, this.dummy.matrix.elements,
+        ) || instanceTransformsChanged;
+      }
       else for (const inst of this.instances) inst.setMatrixAt(i, this.dummy.matrix);
       if (musicLibrary && this.covers) {
         this.covers.setSlot(i, records[fileAtCell(this.cells[i])]);
       }
     }
     if (musicLibrary) {
-      if (this.instances[0]) this.instances[0].instanceMatrix.needsUpdate = true;
+      if (this.instances[0] && instanceTransformsChanged) this.instances[0].instanceMatrix.needsUpdate = true;
     } else for (const inst of this.instances) inst.instanceMatrix.needsUpdate = true;
     this.model.position.set(
       chosen.x - trackX,
@@ -2060,12 +2067,15 @@ export class ArchiveScene {
         independentColumns: this.musicArrayMode === "realistic",
       });
     // AO normals and bokeh depth render this scene again without moving it.
-    // Music frames share the first pass's shadows; the archive reference keeps
-    // Three's original automatic updates. Animated casters still update each frame.
+    // Reuse shadows until a caster/light changes. The archive reference keeps
+    // Three's original automatic updates. Do not consume invalidations in
+    // update-only warmup frames that never submit a draw.
     this.renderer.shadowMap.autoUpdate = !musicLibrary;
-    if (musicLibrary && this.renderer.shadowMap.enabled)
-      this.renderer.shadowMap.needsUpdate = true;
     if (render) {
+      if (musicLibrary && this.renderer.shadowMap.enabled) {
+        const shadowsChanged = this.shadowCache.changed(this.scene);
+        this.renderer.shadowMap.needsUpdate ||= shadowsChanged || this.light.shadow.needsUpdate;
+      }
       this.covers?.flushUploads(this.renderer);
       this.composer.render();
     }

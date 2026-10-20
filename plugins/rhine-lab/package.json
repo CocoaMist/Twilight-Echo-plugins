@@ -1,6 +1,6 @@
 {
   "name": "twilight-rhine-music",
-  "version": "0.2.9",
+  "version": "0.2.10",
   "license": "MIT",
   "private": true,
   "type": "module",
@@ -37,7 +37,8 @@
     "check:interface-audio": "node --test scripts/check-interface-audio.mjs",
     "test": "node --experimental-strip-types --test tests/*.test.mjs",
     "dev:host": "vite --host 127.0.0.1 --port 5321 --strictPort",
-    "check:lyrics": "node --experimental-strip-types --test tests/lyrics.test.mjs && node scripts/check-lyrics-page.mjs"
+    "check:lyrics": "node --experimental-strip-types --test tests/lyrics.test.mjs && node scripts/check-lyrics-page.mjs",
+    "check:performance": "node --experimental-strip-types --test tests/render-performance.test.mjs && node scripts/check-frame-budget.mjs"
   },
   "dependencies": {
     "@kitlangton/rolling-number": "0.4.1",
